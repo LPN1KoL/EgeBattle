@@ -1,0 +1,31 @@
+# Python
+__pycache__
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv
+
+# Database
+db.sqlite3
+tasks
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Django
+*.log
+staticfiles/
+
+#Claude
+.claude
+CLAUDE.md

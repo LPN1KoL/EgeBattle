@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+{% block title %}Игра — EGE Battle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bid-screen {
+        text-align: center;
+    }
+    .bid-screen h2 {
+        margin-bottom: 5px;
+    }
+    .bid-subject {
+        font-size: 1.3em;
+        color: #4a6cf7;
+        margin-bottom: 5px;
+    }
+    .bid-type {
+        color: #888;
+        margin-bottom: 20px;
+    }
+    .bid-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 25px 0;
+    }
+    .bid-btn {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 3px solid #d0d8f0;
+        background: #f8f9fb;
+        color: #1a1a2e;
+        font-size: 1.4em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .bid-btn:hover {
+        border-color: #4a6cf7;
+        background: #e8ecff;
+        transform: scale(1.08);
+    }
+    .bid-btn.selected {
+        border-color: #4a6cf7;
+        background: #4a6cf7;
+        color: #fff;
+        transform: scale(1.1);
+    }
+    .bid-btn[data-val="1"] { border-color: #27ae60; }
+    .bid-btn[data-val="1"]:hover, .bid-btn[data-val="1"].selected { background: #27ae60; color: #fff; border-color: #27ae60; }
+    .bid-btn[data-val="2"] { border-color: #2ecc71; }
+    .bid-btn[data-val="2"]:hover, .bid-btn[data-val="2"].selected { background: #2ecc71; color: #fff; border-color: #2ecc71; }
+    .bid-btn[data-val="3"] { border-color: #e67e22; }
+    .bid-btn[data-val="3"]:hover, .bid-btn[data-val="3"].selected { background: #e67e22; color: #fff; border-color: #e67e22; }
+    .bid-btn[data-val="4"] { border-color: #e74c3c; }
+    .bid-btn[data-val="4"]:hover, .bid-btn[data-val="4"].selected { background: #e74c3c; color: #fff; border-color: #e74c3c; }
+    .bid-btn[data-val="5"] { border-color: #c0392b; }
+    .bid-btn[data-val="5"]:hover, .bid-btn[data-val="5"].selected { background: #c0392b; color: #fff; border-color: #c0392b; }
+    .opponents-bids {
+        margin-top: 20px;
+    }
+    .opponents-bids h3 {
+        color: #888;
+        font-size: 0.95em;
+        margin-bottom: 10px;
+    }
+    .opponent-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #f0f3ff;
+        padding: 6px 14px;
+        border-radius: 20px;
+        margin: 4px;
+        border: 1px solid #d0d8f0;
+    }
+    .opponent-row .opp-name { color: #555; }
+    .opponent-row .opp-bid { font-weight: bold; color: #4a6cf7; }
+    .opponent-row .opp-waiting { color: #bbb; font-style: italic; }
+
+    .game-over-card h2 { font-size: 1.3em; }
+    .results-table th, .results-table td {
+        padding: 8px 10px;
+        font-size: 0.95em;
+    }
+    @media (max-width: 600px) {
+        .game-over-card { padding: 12px 8px; }
+        .game-over-card h2 { font-size: 1.1em; margin-bottom: 10px; }
+        .results-table th, .results-table td {
+            padding: 5px 4px;
+            font-size: 0.75em;
+        }
+        .results-table .badge {
+            padding: 2px 7px;
+            font-size: 0.75em;
+        }
+        .game-over-card .btn {
+            padding: 8px 14px;
+            font-size: 0.85em;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="game-area">
+    <!-- Bid screen -->
+    <div class="card bid-screen" id="bid-card" style="display:none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h2 id="bid-header">Задача 1</h2>
+            <div class="timer" id="bid-timer">1:00</div>
+        </div>
+        <div class="bid-subject" id="bid-subject"></div>
+        <div class="bid-type" id="bid-type"></div>
+        <p style="margin-bottom: 5px;">Выбери сложность:</p>
+        <div class="bid-buttons" id="bid-buttons">
+            <button class="bid-btn" data-val="1">10</button>
+            <button class="bid-btn" data-val="2">20</button>
+            <button class="bid-btn" data-val="3">30</button>
+            <button class="bid-btn" data-val="4">40</button>
+            <button class="bid-btn" data-val="5">50</button>
+        </div>
+        <div class="opponents-bids">
+            <h3>Противники</h3>
+            <div id="opponents-list"></div>
+        </div>
+    </div>
+
+    <!-- Task screen -->
+    <div class="card" id="task-card" style="display:none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 id="task-header">Задача</h2>
+            <div class="timer" id="timer">--</div>
+        </div>
+
+        <div id="scoreboard-inline" class="scoreboard-inline"></div>
+
+        <div id="task-meta" style="margin-bottom: 10px; color: #4a6cf7; font-size: 0.9em;"></div>
+        <div id="task-text" style="white-space: pre-wrap; line-height: 1.6; margin-bottom: 15px;"></div>
+        <div id="task-images" class="task-images"></div>
+        <div id="answers-area"></div>
+        <div id="free-input-area" style="display:none;">
+            <input type="text" class="free-input" id="free-answer" placeholder="Введите ответ...">
+            <button class="btn" id="submit-answer" style="margin-top: 10px;">Ответить</button>
+        </div>
+        <button class="btn btn-danger" id="skip-btn" style="margin-top: 10px;">Пропустить</button>
+        <div id="answer-feedback" style="display:none; margin-top: 15px; padding: 15px; border-radius: 10px; text-align: center;"></div>
+    </div>
+
+    <!-- Task end -->
+    <div class="card" id="task-end-card" style="display:none; text-align:center;">
+        <h2>Правильный ответ:</h2>
+        <p id="correct-answer" style="font-size: 1.5em; color: #27ae60; margin-top: 10px;"></p>
+        <p style="margin-top: 10px; color: #888;">Следующая задача через 3 сек...</p>
+    </div>
+
+    <!-- Waiting -->
+    <div class="card" id="waiting-card" style="text-align: center;">
+        <h2>Загрузка игры...</h2>
+        <p>Подключение к серверу</p>
+    </div>
+</div>
+
+<!-- Game over -->
+<div class="card game-over-card" id="game-over-card" style="display:none;">
+    <h2 style="text-align:center; margin-bottom: 15px;">Игра окончена!</h2>
+    <div class="table-wrap">
+        <table id="results-table" class="results-table">
+            <thead>
+                <tr><th>#</th><th>Игрок</th><th>Очки</th><th>Верно</th><th>Неверно</th><th>Проп.</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div style="text-align: center; margin-top: 15px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+        <a href="{% url 'result' session.id %}" class="btn">Подробные результаты</a>
+        <button class="btn btn-success" id="new-game-btn">Новая игра</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SESSION_ID = {{ session_id }};
+const MY_TG_ID = '{{ player.tg_id }}';
+const SUBJECT_NAMES = {
+    'math': 'Математика', 'russian': 'Русский язык', 'physics': 'Физика',
+    'social': 'Обществознание', 'informatics': 'Информатика'
+};
+
+let ws;
+let answered = false;
+let myBid = null;
+let opponentBids = {};
+let timerInterval = null;
+let redirecting = false;
+let currentScores = [];
+
+function hideAll() {
+    ['bid-card', 'task-card', 'task-end-card', 'waiting-card', 'game-over-card'].forEach(id => {
+        document.getElementById(id).style.display = 'none';
+    });
+}
+
+function connectWS() {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${location.host}/ws/game/${SESSION_ID}/`);
+
+    ws.onopen = () => {
+        document.getElementById('waiting-card').style.display = 'none';
+    };
+    ws.onclose = () => { if (!redirecting) setTimeout(connectWS, 2000); };
+
+    ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        switch (data.type) {
+            case 'bid_start':
+                showBidScreen(data);
+                break;
+            case 'player_bid':
+                showOpponentBid(data.tg_id, data.username, data.difficulty);
+                break;
+            case 'task_start':
+                showTask(data);
+                break;
+            case 'score_update':
+                updateScores(data.scores);
+                break;
+            case 'answer_result':
+                showAnswerFeedback(data);
+                break;
+            case 'task_end':
+                showTaskEnd(data.correct_answer);
+                break;
+            case 'game_over':
+                showGameOver(data.results);
+                break;
+            case 'redirect_to_lobby':
+                redirecting = true;
+                window.location.href = '/lobby/' + data.room_uuid + '/';
+                break;
+        }
+    };
+}
+
+// --- Client-side timer ---
+
+function startClientTimer(elementId, totalSeconds, onEnd) {
+    if (timerInterval) clearInterval(timerInterval);
+    let remaining = totalSeconds;
+    const el = document.getElementById(elementId);
+    function render() {
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        el.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        el.className = remaining <= 10 ? 'timer warning' : 'timer';
+    }
+    render();
+    timerInterval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            remaining = 0;
+            render();
+            if (onEnd) onEnd();
+        } else {
+            render();
+        }
+    }, 1000);
+}
+
+// --- Bid screen ---
+
+function showBidScreen(data) {
+    hideAll();
+    myBid = null;
+    answered = false;
+    opponentBids = {};
+
+    document.getElementById('bid-card').style.display = 'block';
+    document.getElementById('bid-header').textContent = `Задача ${data.order + 1} из ${data.total_tasks}`;
+    document.getElementById('bid-subject').textContent = SUBJECT_NAMES[data.subject] || data.subject;
+    document.getElementById('bid-type').textContent = `Тип задания: ${data.task_type}`;
+    document.getElementById('opponents-list').innerHTML = '';
+    startClientTimer('bid-timer', data.bid_time);
+
+    document.querySelectorAll('.bid-btn').forEach(btn => {
+        btn.classList.remove('selected');
+        btn.disabled = false;
+        btn.onclick = () => {
+            if (myBid !== null) return;
+            myBid = parseInt(btn.dataset.val);
+            btn.classList.add('selected');
+            document.querySelectorAll('.bid-btn').forEach(b => b.disabled = true);
+            ws.send(JSON.stringify({ type: 'choose_difficulty', difficulty: myBid }));
+        };
+    });
+}
+
+function showOpponentBid(tgId, username, difficulty) {
+    opponentBids[tgId] = { username, difficulty };
+    renderOpponents();
+}
+
+function renderOpponents() {
+    const container = document.getElementById('opponents-list');
+    container.innerHTML = '';
+    for (const [tgId, info] of Object.entries(opponentBids)) {
+        const row = document.createElement('span');
+        row.className = 'opponent-row';
+        row.innerHTML = `<span class="opp-name">${info.username}</span> <span class="opp-bid">${info.difficulty * 10}</span>`;
+        container.appendChild(row);
+    }
+}
+
+// --- Task screen ---
+
+function showTask(data) {
+    hideAll();
+    answered = false;
+
+    document.getElementById('task-card').style.display = 'block';
+    document.getElementById('answer-feedback').style.display = 'none';
+    document.getElementById('task-header').textContent = `Задача ${data.order + 1}`;
+    document.getElementById('task-meta').textContent =
+        `${SUBJECT_NAMES[data.subject] || data.subject} | Тип: ${data.task_type} | Сложность: ${myBid ? myBid * 10 : '?'}`;
+    document.getElementById('task-text').textContent = data.text;
+
+    const imagesDiv = document.getElementById('task-images');
+    imagesDiv.innerHTML = '';
+    if (data.images && data.images.length > 0) {
+        data.images.forEach(url => {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Изображение к задаче';
+            imagesDiv.appendChild(img);
+        });
+    }
+
+    const answersArea = document.getElementById('answers-area');
+    const freeArea = document.getElementById('free-input-area');
+
+    if (data.answers && data.answers.length > 0) {
+        answersArea.style.display = 'block';
+        freeArea.style.display = 'none';
+        answersArea.innerHTML = '';
+        const grid = document.createElement('div');
+        grid.className = 'answers-grid';
+        data.answers.forEach(a => {
+            const btn = document.createElement('button');
+            btn.className = 'answer-btn';
+            btn.textContent = a.text;
+            btn.onclick = () => {
+                if (answered) return;
+                answered = true;
+                btn.classList.add('selected');
+                ws.send(JSON.stringify({ type: 'answer_submitted', answer: a.text }));
+                lockControls();
+            };
+            grid.appendChild(btn);
+        });
+        answersArea.appendChild(grid);
+    } else {
+        answersArea.style.display = 'none';
+        freeArea.style.display = 'block';
+        document.getElementById('free-answer').value = '';
+        document.getElementById('free-answer').disabled = false;
+        document.getElementById('submit-answer').disabled = false;
+        document.getElementById('free-answer').focus();
+    }
+
+    document.getElementById('skip-btn').disabled = false;
+    startClientTimer('timer', data.time_limit);
+}
+
+function lockControls() {
+    document.getElementById('submit-answer').disabled = true;
+    document.getElementById('free-answer').disabled = true;
+    document.getElementById('skip-btn').disabled = true;
+    document.querySelectorAll('.answer-btn').forEach(b => b.style.pointerEvents = 'none');
+}
+
+function updateScores(scores) {
+    currentScores = scores;
+    renderScoreboard();
+}
+
+function renderScoreboard() {
+    const sb = document.getElementById('scoreboard-inline');
+    sb.innerHTML = '';
+    const sorted = [...currentScores].sort((a, b) => b.total_score - a.total_score);
+    sorted.forEach((s, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'score-chip';
+        const scoreClass = s.total_score >= 0 ? 'score-positive' : 'score-negative';
+        const medal = i === 0 ? '<span class="medal">1</span>' : '';
+        const prefix = s.total_score > 0 ? '+' : '';
+        chip.innerHTML = `${medal}<span class="chip-name">${s.username}</span><span class="chip-score ${scoreClass}">${prefix}${s.total_score}</span>`;
+        sb.appendChild(chip);
+    });
+}
+
+function showAnswerFeedback(data) {
+    // Локальное обновление счёта сразу
+    if (data.score_delta !== undefined) {
+        const me = currentScores.find(s => String(s.tg_id) === MY_TG_ID);
+        if (me) {
+            me.total_score += data.score_delta;
+            renderScoreboard();
+        }
+    }
+
+    const fb = document.getElementById('answer-feedback');
+    fb.style.display = 'block';
+    if (data.skipped) {
+        fb.style.background = '#fff3e0';
+        fb.style.border = '2px solid #e67e22';
+        fb.innerHTML = `<div style="font-size:1.2em; font-weight:bold; color:#e67e22; margin-bottom:6px;">Пропущено</div>
+            <div style="color:#555;">Правильный ответ: <strong style="color:#27ae60;">${data.correct_answer}</strong></div>
+            <div style="color:#e67e22; margin-top:4px;">${data.score_delta} очков</div>`;
+    } else if (data.is_correct === null) {
+        fb.style.background = '#fff3e0';
+        fb.style.border = '2px solid #e67e22';
+        fb.innerHTML = `<div style="font-size:1.2em; font-weight:bold; color:#e67e22; margin-bottom:6px;">Время вышло</div>
+            <div style="color:#555;">Правильный ответ: <strong style="color:#27ae60;">${data.correct_answer}</strong></div>
+            <div style="color:#e67e22; margin-top:4px;">${data.score_delta} очков</div>`;
+    } else if (data.is_correct) {
+        fb.style.background = '#e8f5e9';
+        fb.style.border = '2px solid #27ae60';
+        fb.innerHTML = `<div style="font-size:1.2em; font-weight:bold; color:#27ae60; margin-bottom:6px;">Ответ верный!</div>
+            <div style="color:#27ae60; margin-top:4px;">+${data.score_delta} очков</div>`;
+    } else {
+        fb.style.background = '#ffeef0';
+        fb.style.border = '2px solid #e74c3c';
+        fb.innerHTML = `<div style="font-size:1.2em; font-weight:bold; color:#e74c3c; margin-bottom:6px;">Ответ неверный</div>
+            <div style="color:#555;">Правильный ответ: <strong style="color:#27ae60;">${data.correct_answer}</strong></div>
+            <div style="color:#e74c3c; margin-top:4px;">${data.score_delta} очков</div>`;
+    }
+}
+
+function showTaskEnd(correctAnswer) {
+    // If feedback is already shown on task-card, keep it visible
+    const fb = document.getElementById('answer-feedback');
+    if (fb.style.display === 'block') {
+        // Already showing feedback, just wait for next task
+        return;
+    }
+    // Fallback: show on task-end-card (e.g. if player reconnected)
+    hideAll();
+    document.getElementById('task-end-card').style.display = 'block';
+    document.getElementById('correct-answer').textContent = correctAnswer;
+}
+
+function showGameOver(results) {
+    hideAll();
+    document.getElementById('game-over-card').style.display = 'block';
+
+    const tbody = document.querySelector('#results-table tbody');
+    tbody.innerHTML = '';
+    results.forEach(r => {
+        const tr = document.createElement('tr');
+        let badge = '';
+        if (r.place === 1) badge = '<span class="badge badge-gold">1</span>';
+        else if (r.place === 2) badge = '<span class="badge badge-silver">2</span>';
+        else if (r.place === 3) badge = '<span class="badge badge-bronze">3</span>';
+        else badge = r.place;
+
+        const scoreClass = r.total_score >= 0 ? 'score-positive' : 'score-negative';
+        tr.innerHTML = `<td>${badge}</td><td>${r.username}</td>
+            <td class="${scoreClass}">${r.total_score}</td>
+            <td>${r.correct_count}</td><td>${r.wrong_count}</td><td>${r.skipped_count}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+document.getElementById('submit-answer').addEventListener('click', () => {
+    if (answered) return;
+    answered = true;
+    const answer = document.getElementById('free-answer').value.trim();
+    ws.send(JSON.stringify({ type: 'answer_submitted', answer }));
+    lockControls();
+});
+
+document.getElementById('free-answer').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('submit-answer').click();
+});
+
+document.getElementById('skip-btn').addEventListener('click', () => {
+    if (answered) return;
+    answered = true;
+    ws.send(JSON.stringify({ type: 'skip_task' }));
+    lockControls();
+});
+
+document.getElementById('new-game-btn').addEventListener('click', () => {
+    const btn = document.getElementById('new-game-btn');
+    btn.disabled = true;
+    btn.textContent = 'Создание...';
+    ws.send(JSON.stringify({ type: 'new_game' }));
+});
+
+connectWS();
+</script>
+{% endblock %}

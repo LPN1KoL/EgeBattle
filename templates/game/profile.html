@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Профиль — EGE Battle{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ player.first_name }} {% if player.username %}(@{{ player.username }}){% endif %}</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
+        <div style="text-align:center;">
+            <div style="font-size: 2em; font-weight: bold;" class="{% if player.total_score >= 0 %}score-positive{% else %}score-negative{% endif %}">
+                {{ player.total_score }}
+            </div>
+            <div style="color: #888;">Всего очков</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-size: 2em; font-weight: bold; color: #7b7bff;">{{ player.games_played }}</div>
+            <div style="color: #888;">Игр сыграно</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-size: 2em; font-weight: bold; color: #ffd700;">
+                {% if player.games_played > 0 %}
+                    {{ avg_score }}
+                {% else %}—{% endif %}
+            </div>
+            <div style="color: #888;">Ср. очки/игра</div>
+        </div>
+    </div>
+</div>
+
+{% if subject_stats %}
+<div class="card">
+    <h2>Статистика по предметам</h2>
+    {% for subj in subject_stats %}
+    <div style="margin-bottom: 15px;">
+        <div style="font-weight: 600; color: #2c3e6b; font-size: 1.1em; margin-bottom: 6px;">
+            {{ subj.name }}
+            <span style="color: #888; font-weight: normal; font-size: 0.9em;">— Решено {{ subj.correct }}/{{ subj.total }}</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            {% for t in subj.types %}
+            <div style="background: #f0f3ff; padding: 6px 12px; border-radius: 8px; border: 1px solid #d0d8f0; font-size: 0.9em;">
+                <span style="color: #555;">Тип {{ t.type }}:</span>
+                <span style="font-weight: bold; color: #4a6cf7;">{{ t.correct }}/{{ t.total }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>История игр</h2>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Дата</th><th>Место</th><th>Очки</th><th>Верно</th></tr>
+        </thead>
+        <tbody>
+            {% for h in history %}
+            <tr>
+                <td>{{ h.session.started_at|date:"j E" }}</td>
+                <td>
+                    {% if h.place == 1 %}<span class="badge badge-gold">1</span>
+                    {% elif h.place == 2 %}<span class="badge badge-silver">2</span>
+                    {% elif h.place == 3 %}<span class="badge badge-bronze">3</span>
+                    {% else %}{{ h.place }}{% endif %}
+                </td>
+                <td class="{% if h.total_score >= 0 %}score-positive{% else %}score-negative{% endif %}">
+                    {{ h.total_score }}
+                </td>
+                <td>{{ h.correct_count }}/{{ h.correct_count|add:h.wrong_count|add:h.skipped_count }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="text-align:center; color:#888;">Пока нет игр</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}

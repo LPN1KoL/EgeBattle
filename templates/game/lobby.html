@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Лобби — EGE Battle{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Комната</h2>
+    <p>Статус: <strong id="room-status">{{ room.get_status_display }}</strong></p>
+    <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button class="btn" id="share-btn" onclick="shareRoom()">Поделиться комнатой</button>
+        <span id="share-status" style="color: #27ae60; font-size: 0.9em; display: none;">Ссылка скопирована!</span>
+    </div>
+</div>
+
+<div class="card" id="settings-card">
+    <h2>Настройки</h2>
+    <div style="margin-bottom: 15px;">
+        <label>Предметы:</label><br>
+        <div id="subjects-list" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+    </div>
+    <div style="margin-bottom: 15px;">
+        <label>Количество задач:</label>
+        <input type="number" id="task-count" min="1" max="20" value="{{ room.task_count }}" style="width: 80px;">
+    </div>
+    <button class="btn" id="start-btn" style="display:none;">Начать игру</button>
+</div>
+
+<div class="card">
+    <h2>Игроки</h2>
+    <div class="players-list" id="players-list"></div>
+</div>
+
+<div id="status-message" class="card" style="display:none; text-align:center;">
+    <p style="font-size: 1.2em;">Ожидание начала игры...</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ROOM_UUID = '{{ room_uuid }}';
+const BOT_USERNAME = '{{ bot_username }}';
+const PLAYER_TG_ID = {{ player.tg_id }};
+const ALL_SUBJECTS = [
+    ['math', 'Математика'], ['russian', 'Русский язык'], ['physics', 'Физика'],
+    ['social', 'Обществознание'], ['informatics', 'Информатика']
+];
+
+let isCreator = false;
+let selectedSubjects = [];
+let ws;
+
+function connectWS() {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${location.host}/ws/room/${ROOM_UUID}/`);
+
+    ws.onopen = () => console.log('WS connected');
+    ws.onclose = () => setTimeout(connectWS, 2000);
+
+    ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        switch (data.type) {
+            case 'room_state':
+                isCreator = data.creator_tg_id === PLAYER_TG_ID;
+                selectedSubjects = data.subjects || [];
+                renderSubjects();
+                renderPlayers(data.players);
+                document.getElementById('task-count').value = data.task_count;
+                if (isCreator) {
+                    document.getElementById('start-btn').style.display = 'inline-block';
+                } else {
+                    document.getElementById('status-message').style.display = 'block';
+                    document.getElementById('task-count').disabled = true;
+                }
+                break;
+            case 'player_joined':
+                addPlayer(data.player);
+                break;
+            case 'player_left':
+                removePlayer(data.tg_id);
+                break;
+            case 'settings_update':
+                if (data.settings.subjects) {
+                    selectedSubjects = data.settings.subjects;
+                    renderSubjects();
+                }
+                if (data.settings.task_count)
+                    document.getElementById('task-count').value = data.settings.task_count;
+                break;
+            case 'redirect_to_game':
+                window.location.href = `/game/${data.session_id}/`;
+                break;
+        }
+    };
+}
+
+function renderSubjects() {
+    const container = document.getElementById('subjects-list');
+    container.innerHTML = '';
+    ALL_SUBJECTS.forEach(([key, label]) => {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.className = selectedSubjects.includes(key) ? 'btn' : 'btn btn-off';
+        btn.style.padding = '5px 12px';
+        btn.style.fontSize = '0.85em';
+        btn.onclick = () => {
+            if (!isCreator) return;
+            const idx = selectedSubjects.indexOf(key);
+            if (idx >= 0) selectedSubjects.splice(idx, 1);
+            else selectedSubjects.push(key);
+            renderSubjects();
+            sendSettings();
+        };
+        if (!isCreator) { btn.style.cursor = 'default'; btn.style.opacity = '0.7'; }
+        container.appendChild(btn);
+    });
+}
+
+function renderPlayers(players) {
+    const list = document.getElementById('players-list');
+    list.innerHTML = '';
+    players.forEach(p => addPlayer(p));
+}
+
+function addPlayer(p) {
+    const list = document.getElementById('players-list');
+    if (document.getElementById(`player-${p.tg_id}`)) return;
+    const card = document.createElement('div');
+    card.className = 'player-card';
+    card.id = `player-${p.tg_id}`;
+    card.innerHTML = `<span class="name">${p.username}</span>`;
+    list.appendChild(card);
+}
+
+function removePlayer(tgId) {
+    const el = document.getElementById(`player-${tgId}`);
+    if (el) el.remove();
+}
+
+function sendSettings() {
+    ws.send(JSON.stringify({
+        type: 'settings_update',
+        settings: {
+            subjects: selectedSubjects,
+            task_count: parseInt(document.getElementById('task-count').value) || 5,
+        }
+    }));
+}
+
+document.getElementById('task-count').addEventListener('change', () => {
+    if (isCreator) sendSettings();
+});
+
+document.getElementById('start-btn').addEventListener('click', () => {
+    ws.send(JSON.stringify({ type: 'game_start' }));
+});
+
+function shareRoom() {
+    const inviteLink = BOT_USERNAME
+        ? `https://t.me/${BOT_USERNAME}?start=${ROOM_UUID}`
+        : window.location.href;
+
+    navigator.clipboard.writeText(inviteLink).then(() => {
+        const status = document.getElementById('share-status');
+        status.style.display = 'inline';
+        setTimeout(() => status.style.display = 'none', 2000);
+    });
+}
+
+connectWS();
+</script>
+{% endblock %}

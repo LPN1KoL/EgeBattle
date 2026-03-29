@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Лидерборд — EGE Battle{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Лидерборд — Топ 50</h2>
+    <table>
+        <thead>
+            <tr><th>#</th><th>Игрок</th><th>Очки</th><th>Игр</th></tr>
+        </thead>
+        <tbody>
+            {% for p in players %}
+            <tr>
+                <td>
+                    {% if forloop.counter == 1 %}<span class="badge badge-gold">1</span>
+                    {% elif forloop.counter == 2 %}<span class="badge badge-silver">2</span>
+                    {% elif forloop.counter == 3 %}<span class="badge badge-bronze">3</span>
+                    {% else %}{{ forloop.counter }}{% endif %}
+                </td>
+                <td>{{ p.username|default:p.first_name }}</td>
+                <td class="{% if p.total_score >= 0 %}score-positive{% else %}score-negative{% endif %}">
+                    {{ p.total_score }}
+                </td>
+                <td>{{ p.games_played }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="text-align:center; color:#888;">Пока нет данных</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

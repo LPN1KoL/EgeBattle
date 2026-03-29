@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Результаты — EGE Battle{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Результаты игры #{{ session.id }}</h2>
+    <p style="color: #888; margin-bottom: 15px;">
+        Начало: {{ session.started_at|date:"d.m.Y H:i" }} |
+        {% if session.finished_at %}Окончание: {{ session.finished_at|date:"d.m.Y H:i" }}{% endif %}
+    </p>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Место</th>
+                <th>Игрок</th>
+                <th>Очки</th>
+                <th>Верно</th>
+                <th>Неверно</th>
+                <th>Пропущено</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in summaries %}
+            <tr>
+                <td>
+                    {% if s.place == 1 %}<span class="badge badge-gold">1</span>
+                    {% elif s.place == 2 %}<span class="badge badge-silver">2</span>
+                    {% elif s.place == 3 %}<span class="badge badge-bronze">3</span>
+                    {% else %}{{ s.place }}{% endif %}
+                </td>
+                <td>{{ s.player.username|default:s.player.first_name }}</td>
+                <td class="{% if s.total_score >= 0 %}score-positive{% else %}score-negative{% endif %}">
+                    {{ s.total_score }}
+                </td>
+                <td>{{ s.correct_count }}</td>
+                <td>{{ s.wrong_count }}</td>
+                <td>{{ s.skipped_count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+<div style="text-align: center; margin-top: 20px;">
+    <a href="{% url 'leaderboard' %}" class="btn">Лидерборд</a>
+</div>
+{% endblock %}
