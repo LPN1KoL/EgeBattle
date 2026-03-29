@@ -129,7 +129,9 @@ def leaderboard_view(request):
 def profile_view(request):
     player_id = request.session.get('player_id')
     if not player_id:
-        return HttpResponseForbidden('Not authenticated')
+        return render(request, 'game/profile_guest.html', {
+            'bot_username': settings.BOT_USERNAME,
+        })
 
     player = get_object_or_404(TelegramUser, id=player_id)
     history = PlayerSessionSummary.objects.filter(

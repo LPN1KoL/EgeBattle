@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Профиль — EGE Battle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .guest-profile {
+        text-align: center;
+        padding: 60px 20px;
+    }
+    .guest-icon {
+        width: 80px;
+        height: 80px;
+        background: #f0f3ff;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5em;
+        color: #4a6cf7;
+        border: 2px solid #d0d8f0;
+        margin-bottom: 24px;
+    }
+    .guest-profile h2 {
+        color: #2c3e6b;
+        font-size: 1.6em;
+        margin-bottom: 12px;
+    }
+    .guest-profile p {
+        color: #666;
+        font-size: 1.05em;
+        line-height: 1.6;
+        max-width: 440px;
+        margin: 0 auto 30px;
+    }
+    .guest-profile .btn-play {
+        padding: 14px 40px;
+        font-size: 1.15em;
+        border-radius: 12px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="guest-profile">
+        <div class="guest-icon">&#128100;</div>
+        <h2>Вы не авторизованы</h2>
+        <p>
+            Войдите через Telegram-бота, чтобы видеть свою статистику, историю игр и позицию в рейтинге.
+        </p>
+        <a href="https://t.me/{{ bot_username }}" class="btn btn-play" target="_blank">
+            Войти через Telegram
+        </a>
+    </div>
+</div>
+{% endblock %}
